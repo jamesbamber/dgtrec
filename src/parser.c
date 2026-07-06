@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <assert.h>
 
 typedef struct MNIST_dataset {
     int images;
@@ -7,6 +8,11 @@ typedef struct MNIST_dataset {
     int cols;
     float *data;
 } MNIST_dataset;
+
+typedef struct MNIST_labels {
+    int images;
+    int *data;
+} MNIST_labels;
 
 // define functions to read integers and convert to little endian
 void fread_little_endian(unsigned int *buffer, unsigned int size, unsigned int n, FILE *f) {
@@ -23,7 +29,7 @@ float normalize(unsigned char pixel) {
     return (float)pixel / 256.0;
 }
 
-MNIST_dataset retrieve_data(FILE* fp) {
+MNIST_dataset retrieve_images(FILE* fp) {
     /*  
         IDX file format:
         4 bytes: magic number (byte 3 is type of data, bu)
@@ -40,6 +46,8 @@ MNIST_dataset retrieve_data(FILE* fp) {
     int data_type = (magic >> 8) & 255;
     printf("magic: %04x\n", magic);
     printf("number of dimensions: %d, data_type code: %d\n", dimensions, data_type);
+
+    assert(dimensions == 3 && data_type == 8);
 
     int sizes[3];
     fread_little_endian(sizes, sizeof(int), 3, fp);
@@ -70,31 +78,30 @@ MNIST_dataset retrieve_data(FILE* fp) {
     return dataset;
 }
 
-int main(int argc, char *argv[]) {
-    if(argc != 3) {
-        fprintf(stderr, "usage: ./parser images.idx labels.idx\n");
-        exit(0);
+MNIST_labels retrieve_labels(FILE* fp) {
+    int magic; 
+    fread_little_endian(&magic, sizeof(int), 1, fp);
+
+    int dimensions = magic & 255;
+    int data_type = (magic >> 8) & 255;
+    printf("magic: %04x\n", magic);
+    printf("number of dimensions: %d, data_type code: %d\n", dimensions, data_type);
+
+    assert(dimensions == 1 && data_type == 8);
+
+    int size;
+    fread_little_endian(&size, sizeof(int), 1, fp);
+
+    MNIST_labels labels;
+    labels.images = size;
+    labels.data = (int *)malloc(sizeof(int) * labels.images);
+        
+    for(int i = 0; i < labels.images; i++) {
+        char label;
+
+        fread(&label, sizeof(char), 1, fp);
+        labels.data[i] = label;
     }
 
-    char *images_path = argv[1];
-    char *labels_path = argv[2];
-
-    FILE *fp_images = fopen(images_path, "rb"); 
-    FILE *fp_labels = fopen(labels_path, "rb"); 
-
-    if(!fp_images || !fp_labels) {
-        fprintf(stderr, "file doesn't exist\n");
-        exit(0);
-    }
-
-    MNIST_dataset dataset = retrieve_data(fp_images);
-    // retrieve_data(fp_labels);
-
-    // print first image as test
-    for(int r = 0; r < dataset.rows; r++) {
-        for(int c = 0; c < dataset.cols; c++) {
-            printf("%.2f ", dataset.data[r * dataset.cols + c]);
-        }
-        printf("\n");
-    }
+    return labels;
 }
