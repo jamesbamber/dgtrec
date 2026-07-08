@@ -48,6 +48,24 @@ void test_prod() {
     delete_matrix(c);
 }
 
+void test_sigmoid() {
+    Matrix A = new_matrix(3, 3);
+    for(int i = 0; i < A.rows * A.cols; i++) {
+        assert(-1 <= A.data[i] && A.data[i] <= 1);
+        A.data[i] = A.data[i] * 2 - 1;
+    }
+    
+    for(int t=0; t<3; t++) {
+        matrix_sigmoid(A);
+        for(int i = 0; i < A.rows * A.cols; i++) {
+            assert(0 <= A.data[i] && A.data[i] <= 1);
+            A.data[i] *= 5;
+        }
+    }
+
+    delete_matrix(A);
+}
+
 int main() {
     printf("Testing matrix sum: ");
     test_sum();
@@ -55,5 +73,9 @@ int main() {
 
     printf("Testing matrix product: ");
     test_prod();
+    printf("OK\n");
+
+    printf("Testing sigmoid function: ");
+    test_sigmoid();
     printf("OK\n");
 }
